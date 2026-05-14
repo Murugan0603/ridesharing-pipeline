@@ -1,0 +1,28 @@
+version: '3.8'
+
+services:
+  jenkins:
+    image: jenkins/jenkins:lts    # Official Jenkins image
+    container_name: rideshare-jenkins
+    
+    # ✅ இந்த ports மாத்தாதீங்க
+    ports:
+      - "8080:8080"    # Jenkins UI: localhost:8080
+      - "50000:50000"  # Jenkins agents port
+    
+    volumes:
+      # Jenkins data save ஆகும் - container delete ஆனாலும் data இருக்கும்
+      - jenkins-data:/var/jenkins_home
+      
+      # Docker commands Jenkins-ல run ஆக இது வேணும்
+      - /var/run/docker.sock:/var/run/docker.sock
+    
+    environment:
+      # ✅ First time password skip பண்ண
+      - JAVA_OPTS=-Djenkins.install.runSetupWizard=false
+
+    # Jenkins container-ல docker install பண்றோம்
+    user: root
+
+volumes:
+  jenkins-data:

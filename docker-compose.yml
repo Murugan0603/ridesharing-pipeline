@@ -1,0 +1,140 @@
+version: '3.8'
+
+services:
+
+  # ═══════════════════════════════
+  # DATABASE LAYER
+  # ═══════════════════════════════
+
+  redis:
+    image: redis:7-alpine      # Official Redis image
+    container_name: rideshare-redis
+    ports:
+      - "6379:6379"            # laptop:container
+    volumes:
+      - redis-data:/data       # Data save ஆகும்
+
+  postgres:
+    image: postgres:15-alpine
+    container_name: rideshare-postgres
+    environment:
+      # ✅ Change this: உங்க own password போடுங்க
+      POSTGRES_DB: rideshare
+      POSTGRES_USER: admin
+      POSTGRES_PASSWORD: secret123
+    ports:
+      - "5432:5432"
+    volumes:
+      - pg-data:/var/lib/postgresql/data
+
+  # DB-ஐ browser-ல பார்க்க UI tools
+  redisinsight:
+    image: redislabs/redisinsight:latest
+    container_name: rideshare-redisinsight
+    ports:
+      - "8001:8001"            # Browser: localhost:8001
+
+  pgadmin:
+    image: dpage/pgadmin4
+    container_name: rideshare-pgadmin
+    environment:
+      # ✅ Change this: உங்க email போடுங்க
+      PGADMIN_DEFAULT_EMAIL: admin@rideshare.com
+      PGADMIN_DEFAULT_PASSWORD: admin123
+    ports:
+      - "5050:80"              # Browser: localhost:5050
+
+  # ═══════════════════════════════
+  # MICROSERVICES LAYER
+  # ═══════════════════════════════
+
+  auth-svc:
+    build: ./services/auth-svc  # இந்த folder-ல Dockerfile இருக்கும்
+    container_name: rideshare-auth
+    ports:
+      - "3001:3001"
+    environment:
+      - NODE_ENV=development
+    depends_on:
+      - postgres                # Postgres start ஆனதுக்கு பிறகு start ஆகும்
+
+  matching-svc:
+    build: ./services/matching-svc
+    container_name: rideshare-matching
+    ports:
+      - "3002:3002"
+    environment:
+      - REDIS_HOST=redis        # Redis-ஓட docker name
+    depends_on:
+      - redis
+
+  location-svc:
+    build: ./services/location-svc
+    container_name: rideshare-location
+    ports:
+      - "3003:3003"
+    depends_on:
+      - redis
+
+  trip-svc:
+    build: ./services/trip-svc
+    container_name: rideshare-trip
+    ports:
+      - "3004:3004"
+    environment:
+      - DB_HOST=postgres
+      - DB_NAME=rideshare
+      - DB_USER=admin
+      - DB_PASS=secret123       # ✅ postgres-ல போட்ட password-ஐ match பண்ணுங்க
+    depends_on:
+      - postgres
+      - redis
+
+  websocket-svc:
+    build: ./services/websocket-svc
+    container_name: rideshare-websocket
+    ports:
+      - "3005:3005"
+    depends_on:
+      - redis
+
+  notify-svc:
+    build: ./services/notify-svc
+    container_name: rideshare-notify
+    ports:
+      - "3006:3006"
+
+  payment-svc:
+    build: ./services/payment-svc
+    container_name: rideshare-payment
+    ports:
+      - "3007:3007"
+    depends_on:
+      - postgres
+
+  route-svc:
+    build: ./services/route-svc
+    container_name: rideshare-route
+    ports:
+      - "3008:3008"
+
+  # ═══════════════════════════════
+  # API GATEWAY
+  # ═══════════════════════════════
+
+  nginx:
+    image: nginx:alpine
+    container_name: rideshare-nginx
+    ports:
+      - "80:80"                 # Main entry point: localhost:80
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf
+    depends_on:
+      - auth-svc
+      - matching-svc
+      - location-svc
+
+# Data persistent storage
+volumes:
+  redis-data:
+  pg-data:
