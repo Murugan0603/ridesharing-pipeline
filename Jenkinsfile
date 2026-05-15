@@ -1,63 +1,78 @@
 pipeline {
-    // ✅ எந்த Jenkins agent-லயும் run ஆகும்
+
+    // Jenkins agent
     agent any
 
-    // ✅ Change this: உங்க AWS details போடுங்க
     environment {
-        AWS_REGION      = 'ap-south-1'           // Mumbai region
-        ECR_REGISTRY    = 'YOUR-AWS-ACCOUNT-ID.dkr.ecr.ap-south-1.amazonaws.com'
-        APP_NAME        = 'rideshare'
-        IMAGE_TAG       = "${BUILD_NUMBER}"       // Auto: 1, 2, 3...
+        APP_NAME  = 'rideshare'
+        IMAGE_TAG = "${BUILD_NUMBER}"
     }
 
     stages {
 
         // ════════════════════════════════
-        // STAGE 1: Code எடுக்குறோம்
+        // STAGE 1: Checkout Code
         // ════════════════════════════════
         stage('Checkout') {
             steps {
-                echo '======= Stage 1: Checking out code from GitHub ======='
-                checkout scm   // GitHub-லிருந்து code pull பண்றோம்
+                echo '======= Stage 1: Checking out code ======='
+
+                checkout scm
+
                 echo "Branch: ${env.GIT_BRANCH}"
                 echo "Commit: ${env.GIT_COMMIT}"
             }
         }
 
         // ════════════════════════════════
-        // STAGE 2: Tests run பண்றோம்
+        // STAGE 2: Run Tests
         // ════════════════════════════════
         stage('Test') {
+
             parallel {
-                // Auth service test (Node.js)
+
+                // AUTH SERVICE
                 stage('Test auth-svc') {
                     steps {
+
                         echo '======= Testing auth-svc ======='
+
                         dir('services/auth-svc') {
+
                             bat 'npm install'
-                            bat 'echo "Auth service tests passed!"'
-                            // ✅ Later: sh 'npm test' add பண்ணலாம்
+
+                            bat 'echo Auth service tests passed!'
+
                         }
                     }
                 }
-                // Matching service test (Python)
+
+                // MATCHING SERVICE
                 stage('Test matching-svc') {
                     steps {
+
                         echo '======= Testing matching-svc ======='
+
                         dir('services/matching-svc') {
+
                             bat 'pip install -r requirements.txt'
-                            bat 'echo "Matching service tests passed!"'
-                            // ✅ Later: sh 'pytest tests/' add பண்ணலாம்
+
+                            bat 'echo Matching service tests passed!'
+
                         }
                     }
                 }
-                // Location service test (Go)
+
+                // LOCATION SERVICE
                 stage('Test location-svc') {
                     steps {
+
                         echo '======= Testing location-svc ======='
+
                         dir('services/location-svc') {
-                            bat 'echo "Location service tests passed!"'
-                            // ✅ Later: sh 'go test ./...' add பண்ணலாம்
+
+                            bat 'echo Location service tests passed!'
+
                         }
                     }
                 }
@@ -65,93 +80,93 @@ pipeline {
         }
 
         // ════════════════════════════════
-        // STAGE 3: Docker Images Build
+        // STAGE 3: Docker Build
         // ════════════════════════════════
         stage('Docker Build') {
+
             steps {
-                echo '======= Stage 3: Building Docker images ======='
-                
-                // Auth service image build
-                bat """
-                    docker build \
-                        -t ${APP_NAME}-auth:${IMAGE_TAG} \
-                        -t ${APP_NAME}-auth:latest \
-                        ./services/auth-svc
-                """
-                echo "auth-svc image built: ${APP_NAME}-auth:${IMAGE_TAG}"
 
-                // Matching service image build
-                bat """
-                    docker build \
-                        -t ${APP_NAME}-matching:${IMAGE_TAG} \
-                        -t ${APP_NAME}-matching:latest \
-                        ./services/matching-svc
-                """
-                echo "matching-svc image built!"
+                echo '======= Building Docker Images ======='
 
-                // Location service image build
+                // AUTH IMAGE
                 bat """
-                    docker build \
-                        -t ${APP_NAME}-location:${IMAGE_TAG} \
-                        -t ${APP_NAME}-location:latest \
-                        ./services/location-svc
+                docker build -t ${APP_NAME}-auth:${IMAGE_TAG} -t ${APP_NAME}-auth:latest ./services/auth-svc
                 """
-                echo "location-svc image built!"
+
+                // MATCHING IMAGE
+                bat """
+                docker build -t ${APP_NAME}-matching:${IMAGE_TAG} -t ${APP_NAME}-matching:latest ./services/matching-svc
+                """
+
+                // LOCATION IMAGE
+                bat """
+                docker build -t ${APP_NAME}-location:${IMAGE_TAG} -t ${APP_NAME}-location:latest ./services/location-svc
+                """
+
+                echo 'Docker images built successfully!'
             }
         }
-                // ════════════════════════════════
-        // STAGE 3.5: Docker Hub Push
+
+        // ════════════════════════════════
+        // STAGE 4: Docker Hub Push
         // ════════════════════════════════
         stage('Docker Push') {
-            steps {
-                echo '======= Pushing image to Docker Hub ======='
 
-                bat 'docker login -u mano0603 -p Mano@0603'
+            steps {
+
+                echo '======= Docker Hub Login ======='
+
+                bat 'docker login -u mano0603 -p AKIAY3M7ZZZZRNB56D20'
+
+                echo '======= Tagging Image ======='
 
                 bat """
-                    docker tag ${APP_NAME}-auth:${IMAGE_TAG} mano0603/rideshare-auth:${IMAGE_TAG}
+                docker tag ${APP_NAME}-auth:${IMAGE_TAG} mano0603/rideshare-auth:${IMAGE_TAG}
                 """
 
+                echo '======= Pushing Image ======='
+
                 bat """
-                    docker push mano0603/rideshare-auth:${IMAGE_TAG}
+                docker push mano0603/rideshare-auth:${IMAGE_TAG}
                 """
 
                 echo 'Docker image pushed successfully!'
             }
         }
-
-        // ════════════════════════════════
-        // STAGE 4: ECR-க்கு Push பண்றோம்
-        // ════════════════════════════════
-       //
+    }
 
     // ════════════════════════════════
-    // PIPELINE முடிஞ்சதும் - Notify
+    // POST ACTIONS
     // ════════════════════════════════
     post {
+
         success {
+
             echo """
-            ╔══════════════════════════════╗
-            ║  BUILD SUCCESS! ✅           ║
-            ║  Build Number: ${BUILD_NUMBER}
-            ║  All services deployed!      ║
-            ╚══════════════════════════════╝
-            """
-            // ✅ Later: Slack notification add பண்ணலாம்
+╔══════════════════════════════╗
+║  BUILD SUCCESS! ✅           ║
+║  Build Number: ${BUILD_NUMBER}
+║  Pipeline completed!         ║
+╚══════════════════════════════╝
+"""
         }
+
         failure {
+
             echo """
-            ╔══════════════════════════════╗
-            ║  BUILD FAILED! ❌            ║
-            ║  Build Number: ${BUILD_NUMBER}
-            ║  Check logs above!           ║
-            ╚══════════════════════════════╝
-            """
+╔══════════════════════════════╗
+║  BUILD FAILED! ❌            ║
+║  Build Number: ${BUILD_NUMBER}
+║  Check Jenkins logs!         ║
+╚══════════════════════════════╝
+"""
         }
+
         always {
-            // Build முடிஞ்சதும் old Docker images cleanup
-            bat 'docker system prune -f || true'
-            echo "Pipeline completed at: ${new Date()}"
+
+            bat 'docker system prune -f'
+
+            echo "Pipeline completed!"
         }
     }
 }
