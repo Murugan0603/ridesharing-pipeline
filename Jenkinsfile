@@ -99,6 +99,26 @@ pipeline {
                 echo "location-svc image built!"
             }
         }
+                // ════════════════════════════════
+        // STAGE 3.5: Docker Hub Push
+        // ════════════════════════════════
+        stage('Docker Push') {
+            steps {
+                echo '======= Pushing image to Docker Hub ======='
+
+                bat 'docker login -u YOUR_DOCKERHUB_USERNAME -p YOUR_DOCKERHUB_PASSWORD'
+
+                bat """
+                    docker tag ${APP_NAME}-auth:${IMAGE_TAG} YOUR_DOCKERHUB_USERNAME/rideshare-auth:${IMAGE_TAG}
+                """
+
+                bat """
+                    docker push YOUR_DOCKERHUB_USERNAME/rideshare-auth:${IMAGE_TAG}
+                """
+
+                echo 'Docker image pushed successfully!'
+            }
+        }
 
         // ════════════════════════════════
         // STAGE 4: ECR-க்கு Push பண்றோம்
