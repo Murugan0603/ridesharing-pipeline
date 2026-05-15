@@ -106,14 +106,14 @@ pipeline {
             steps {
                 echo '======= Pushing image to Docker Hub ======='
 
-                bat 'docker login -u YOUR_DOCKERHUB_USERNAME -p YOUR_DOCKERHUB_PASSWORD'
+                bat 'docker login -u mano0603 -p Mano@0604'
 
                 bat """
-                    docker tag ${APP_NAME}-auth:${IMAGE_TAG} YOUR_DOCKERHUB_USERNAME/rideshare-auth:${IMAGE_TAG}
+                    docker tag ${APP_NAME}-auth:${IMAGE_TAG} mano0603/rideshare-auth:${IMAGE_TAG}
                 """
 
                 bat """
-                    docker push YOUR_DOCKERHUB_USERNAME/rideshare-auth:${IMAGE_TAG}
+                    docker push mano0603/rideshare-auth:${IMAGE_TAG}
                 """
 
                 echo 'Docker image pushed successfully!'
