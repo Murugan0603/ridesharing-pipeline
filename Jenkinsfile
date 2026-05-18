@@ -58,7 +58,7 @@ pipeline {
         stage('Docker Push') {
             steps {
                 echo 'Docker Hub login...'
-                bat 'docker login -u mano0603 -p AKIAY3M7ZZZZRNB56D20'
+                bat 'echo Mano0603 | docker login -u mano0603 --password-stdin'
                 bat """
                 docker tag ${APP_NAME}-auth:${IMAGE_TAG} mano0603/rideshare-auth:${IMAGE_TAG}
                 """
@@ -68,18 +68,18 @@ pipeline {
                 echo 'Docker image pushed!'
             }
         }
-    }
-    // POST
-    post {
-        success {
-            echo 'BUILD SUCCESS!'
-        }
-        failure {
-            echo 'BUILD FAILED!'
-        }
-        always {
-            bat 'docker system prune -f'
-            echo 'Pipeline completed!'
+        // POST
+        post {
+            success {
+                echo 'BUILD SUCCESS!'
+            }
+            failure {
+                echo 'BUILD FAILED!'
+            }
+            always {
+                bat 'docker system prune -f'
+                echo 'Pipeline completed!'
+            }
         }
     }
 }
