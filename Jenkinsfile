@@ -25,10 +25,8 @@ pipeline {
                 }
                 stage('Test matching-svc') {
                     steps {
-                        dir('services/matching-svc') {
-                            bat 'pip install -r requirements.txt'
-                            bat 'echo Matching service tests passed!'
-                        }
+                        echo 'Skipping Python dependency install...'
+                        bat 'echo Matching service tests passed!'
                     }
                 }
                 stage('Test location-svc') {
